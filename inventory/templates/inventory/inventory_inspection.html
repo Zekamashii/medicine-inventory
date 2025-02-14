@@ -1,0 +1,245 @@
+{% extends 'inventory/base.html' %}
+{% load custom_filters %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">実数カウント：<span style="color: #2c3e50;font-weight: bold;">{{ selected_site_name }}</span></h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/kaunto" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    {% if selected_site_id %}
+        <div class="overall-discrepancy-rate mt-2">
+                        <h6>在庫差異率：
+                            <span id="overall-discrepancy-rate" style="color: {% if overall_discrepancy_rate > 5 %}red{% else %}green{% endif %};">
+                    {{ overall_discrepancy_rate|floatformat:2 }} %
+                </span>
+            </h6>
+        </div>
+    {% endif %}
+    <hr style="text-align:left;margin-left:0">
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="flex-grow-1 me-5" style="max-width: 50%;">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-dismissible {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} mb-0">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <p class="mb-0">{{ message }}</p>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="d-flex flex-shrink-0">
+            {% if selected_site_id %}
+                <button type="button" class="btn btn-warning me-2" id="copy-data-btn" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="システム在庫数をコピー">{% bs_icon 'copy' %} コピー</button>
+                <button type="button" class="btn btn-secondary me-2" id="clear-data-btn" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="現在の実数入力をクリア">{% bs_icon 'x-circle' %} クリア</button>
+                <button type="submit" form="inspection-form" class="btn btn-primary me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="入力したカウント数を保存">{% bs_icon 'floppy' %} 保存</button>
+                <a href="{% url 'batch-adjustment' %}" class="btn btn-danger me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="差異調整に移動">{% bs_icon 'wrench-adjustable-circle' %} 差異調整</a>
+                <a href="{% url 'export_inventory_csv' %}" class="btn btn-success me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="履歴をエクスポート">{% bs_icon 'filetype-csv' %} エクスポート</a>
+                <a href="{% url 'inspection-history' %}" class="btn btn-dark me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="実数カウント履歴に移動">{% bs_icon 'clock-history' %} 履歴</a>
+                <a href="{% url 'validation' %}" class="btn btn-light" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="不一致レポートに移動">{% bs_icon 'database-fill-exclamation' %} 不一致レポート</a>
+            {% else %}
+                <p>🧙‍♂️ 拠点を選んで、世界を救いましょう！🚀</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <form id="inspection-form" method="post" action="{% url 'inspection' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="site_id" value="{{ selected_site_id }}">
+        <table class="table-auto">
+            <thead>
+                <tr>
+                    <th>医薬品名・種類</th>
+                    <th>計算上の在庫数</th>
+                    <th>実在庫数{% if latest_inspection_time %} ({{ latest_inspection_time }} by {{ inspector.last_name|default:"" }} {{ inspector.first_name|default:inspector.username }}) {% endif %}</th>
+                    <th>差異調整</th>
+                    <th>カウント数入力</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category, items in inventory_by_category.items %}
+                    {% if items %}
+                        <tr class="category-row">
+                            <td style="border: 1px solid #ddd; text-align: left; padding: 8px; font-weight: bold; background-color: #2fc3a6;">{{ category }}</td>
+                        </tr>
+                        {% for drug in items %}
+                            {% with history=drug_histories|get_item:drug.name %}
+                                {% if history and history.0.discrepancy != 0 %}
+                                    <tr class="data-row highlight-discrepancy">
+                                {% else %}
+                                    <tr class="data-row">
+                                {% endif %}
+                            {% endwith %}
+                                <td style="border: 1px solid #ddd; text-align: left; padding: 8px; padding-left: 20px; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ drug.name }}</td>
+                                <td class="data-cell">
+                                    <input type="hidden" name="data_{{ drug.id }}" value="{{ drug.quantity }}" />
+                                        {{ drug.quantity }}
+                                </td>
+                                <td class="saved-data">
+                                    {% if drug_histories %}
+                                        {% with history=drug_histories|get_item:drug.name %}
+                                            {% if history %}
+                                                <span>{{ history.0.actual_quantity }}</span>
+                                            {% else %}
+                                                <span>-</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span>-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="discrepancy">
+                                    {% if inventory_adjusted is True %}
+                                        <span>調整済み</span>
+                                    {% else %}
+                                        {% if drug_histories %}
+                                            {% with history=drug_histories|get_item:drug.name %}
+                                                {% if history %}
+                                                    <span>{{ history.0.discrepancy }}</span>
+                                                {% else %}
+                                                    <span>-</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span>-</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <input type="number" name="manual_input_{{ drug.id }}" class="form-control manual-input" required/>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+
+    {% if selected_site_id %}
+        <div class="d-flex justify-content-end mt-3">
+            <button type="submit" form="inspection-form" class="btn btn-primary">結果を保存</button>
+            <a href="javascript:history.back()" class="btn text-body-tertiary">キャンセル</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .table-auto {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-auto th, .table-auto td {
+        border: 1px solid #ddd;
+        text-align: left;
+        padding: 8px;
+        white-space: nowrap;
+    }
+
+    .table-auto th {
+        background-color: #f2f2f2;
+    }
+
+    input[type="number"] {
+        width: 80px;
+        border: 1px solid #ccc;
+        padding: 0px;
+        text-align: left;
+    }
+
+    .category-row td {
+        background-color: #2fc3a6;
+        font-weight: bold;
+    }
+
+    .highlight-discrepancy {
+        background-color: #ffffe0;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var SiteId = "{{ selected_site_id }}";
+
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    var copyDataBtn = document.getElementById('copy-data-btn');
+    var clearDataBtn = document.getElementById('clear-data-btn');
+
+    function calculateDiscrepancyRate() {
+        var rows = document.querySelectorAll('.data-row');
+        var totalExpected = 0;
+        var totalActual = 0;
+        var discrepancy = 0;
+
+        rows.forEach(function(row) {
+            var expectedQuantity = parseInt(row.querySelector('.data-cell').textContent.trim());
+            var actualQuantityElement = row.querySelector('.saved-data span');
+            var actualQuantity = actualQuantityElement ? parseInt(actualQuantityElement.textContent.trim()) : NaN;
+
+            if (!isNaN(expectedQuantity) && !isNaN(actualQuantity)) {
+                totalExpected += expectedQuantity;
+                totalActual += actualQuantity;
+            }
+        });
+
+            if (discrepancy != null && typeof discrepancy === 'number') {
+                if (discrepancy !== 0) {
+                    row.classList.add('highlight-discrepancy');
+                }
+            }
+
+        var overallDiscrepancyRate = 0;
+        if (totalExpected > 0) {
+            overallDiscrepancyRate = (Math.abs(totalActual - totalExpected) / totalExpected) * 100;
+        }
+
+         if (SiteId && SiteId !== "None") {
+            var discrepancyRateElement = document.getElementById('overall-discrepancy-rate');
+            discrepancyRateElement.textContent = overallDiscrepancyRate.toFixed(2) + ' %';
+
+            if (overallDiscrepancyRate > 5) {
+                discrepancyRateElement.style.color = 'red';
+            } else {
+                discrepancyRateElement.style.color = 'green';
+            }
+        }
+    }
+
+    // Initial calculation of discrepancies
+    calculateDiscrepancyRate();
+
+    if (SiteId && SiteId !== "None") {
+        copyDataBtn.addEventListener('click', function() {
+            var dataCells = document.querySelectorAll('.data-cell');
+            var manualInputs = document.querySelectorAll('.manual-input');
+            dataCells.forEach(function(cell, index) {
+                var dataValue = cell.textContent.trim();
+                if (manualInputs[index]) {
+                    manualInputs[index].value = dataValue;
+                }
+            });
+        });
+
+        clearDataBtn.addEventListener('click', function() {
+            var manualInputs = document.querySelectorAll('.manual-input');
+            manualInputs.forEach(function(input) {
+                input.value = '';
+            });
+        });
+    }
+});
+
+</script>
+
+{% endblock content %}

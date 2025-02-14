@@ -1,0 +1,188 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">入出庫履歴照会：<span style="color: #2c3e50;font-weight: bold;">{{ selected_site_name }}</span></h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/ru-chu-kulli-zhao-hui" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <div class="d-flex justify-content-between mb-4">
+        <!-- Search Box on the Left -->
+        <div>
+            <form class="d-flex" method="get" action="">
+                <div class="col-sm-12 p-0 me-2">
+                    <input class="form-control me-2" type="search" placeholder="品名、製造番号、商品コード..." aria-label="Search" name="search_query" value="{{ request.GET.search_query|default:'' }}">
+                </div>
+                <div class="col-sm-4 p-0 d-flex justify-content-start">
+                    <button class="btn btn-outline-success" type="submit">検索</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Button Container -->
+        <div class="d-flex align-items-center">
+            <a href="{% url 'export-transactions' %}" class="btn btn-success me-2">{% bs_icon 'filetype-csv' %} エクスポート</a>
+        </div>
+    </div>
+
+    {% with request.GET.page as current_page %}
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>
+                    <a href="?sort=id&order={% if request.GET.sort == 'id' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        ID
+                        {% if request.GET.sort == 'id' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'id' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=name&order={% if request.GET.sort == 'name' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        医薬品名
+                        {% if request.GET.sort == 'name' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'name' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=quantity&order={% if request.GET.sort == 'quantity' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        数量
+                        {% if request.GET.sort == 'quantity' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'quantity' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>単位</th>
+                <th>
+                    <a href="?sort=type&order={% if request.GET.sort == 'type' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        取引タイプ
+                        {% if request.GET.sort == 'type' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'type' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=lot&order={% if request.GET.sort == 'lot' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        製造番号
+                        {% if request.GET.sort == 'lot' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'lot' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=lot&order={% if request.GET.sort == 'expire_date' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        使用期限
+                        {% if request.GET.sort == 'expire_date' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'expire_date' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort={% if request.GET.sort == 'source_site' %}dest_site{% else %}source_site{% endif %}&order={% if request.GET.sort == 'source_site' or request.GET.sort == 'dest_site' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        拠点
+                        {% if request.GET.sort == 'source_site' or request.GET.sort == 'dest_site' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field in 'source_site,dest_site' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=date_created&order={% if request.GET.sort == 'date_created' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        最終更新日時
+                        {% if request.GET.sort == 'date_created' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'date_created' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=user&order={% if request.GET.sort == 'user' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        作成者
+                        {% if request.GET.sort == 'user' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'user' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr data-item-id="{{ item.id }}" data-transaction-type="{{ item.type }}" style="cursor:pointer;">
+                <td>{{ item.id }}</td>
+                <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.name }}</td>
+                <td>
+                    {% if item.type == "C" %}
+                        <span style="text-decoration: line-through;">{{ item.quantity }}</span>
+                    {% else %}
+                        {{ item.quantity }} {% if item.type == "A" %}(Δ){% endif %}
+                    {% endif %}
+                </td>
+                <td>{{ item.unit }}</td>
+                <td>{{ item.get_type_display }}
+                    {% if item.type == "T" %}
+                        （{{ item.get_status_display }}）
+                    {% endif %}
+                </td>
+                <td>{{ item.lot }}</td>
+                <td>{% if item.expire_date %} {{ item.expire_date|date:"Y-m-d" }} {% else %} - {% endif %}</td>
+                <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {% if item.type == "I" %}
+                        {{ item.dest_site }}
+                    {% elif item.type == "O" %}
+                        {{ item.source_site }}
+                    {% elif item.type == "T" %}
+                        {{ item.source_site }} → {{ item.dest_site }}
+                    {% elif item.type == "A" %}
+                        {% if item.source_site %} {{ item.source_site }} {% else %} {{ item.dest_site }} {% endif %}
+                    {% elif item.type == "C" %}
+                        {% if item.source_site %} {{ item.source_site }} {% else %} {{ item.dest_site }} {% endif %}
+                    {% endif %}
+                </td>
+
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.date_created|date:"Y-m-d  H:i:s" }}</td>
+                <td>{{ item.user.last_name|default:"" }} {{ item.user.first_name|default:item.user.username }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include 'inventory/pagination.html' %}
+    {% endwith %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('click', function(event) {
+            const row = event.target.closest('tr[data-item-id]');
+            if (row) {
+                const transactionType = row.getAttribute('data-transaction-type');
+                if (['I', 'O', 'T'].includes(transactionType)) {
+                    const itemId = row.getAttribute('data-item-id');
+                    window.location.href = `{% url 'cancel_transaction' pk=0 %}`.replace('/0/', `/${itemId}/`);
+                }
+            }
+        });
+    });
+</script>
+{% endblock content %}

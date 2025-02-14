@@ -1,0 +1,39 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">医薬品マスターをインポート</h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/masut#csv-fairukarainpto" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group row">
+            <div class="col-sm-4">
+                <input class="form-control" type="file" name="myfile">
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-primary">インポートする</button>
+            </div>
+        </div>
+    </form>
+
+    {% if errors %}
+    <div class="mt-4">
+        <h4 class="text-danger">エラー 😭</h4>
+        <ul>
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+        <p>詳細については、<a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/masut#csv-fairukarainpto" target="_blank">ヘルプドキュメント</a>をご覧ください。</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">医薬品マスター</h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/masut" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <!-- Button Container -->
+    <div class="d-flex justify-content-end mb-4">
+        <a href="{% url 'create-drug-master' %}" class="btn btn-primary me-2">{% bs_icon 'plus-circle' %} 追加</a>
+        <a href="{% url 'safety-stock-matrix' %}" class="btn btn-info me-2">{% bs_icon 'box-seam' %} 定数設定</a>
+        <a href="{% url 'drug-master-export' %}" class="btn btn-success me-2">{% bs_icon 'file-earmark-arrow-down' %} エクスポート</a>
+        <a href="{% url 'drug-master-import' %}" class="btn btn-warning me-2">{% bs_icon 'file-earmark-arrow-up' %} インポート</a>
+        <button id="toggleObsoleteBtn" class="btn btn-light">{% bs_icon 'check2-circle' %} 廃止項目を非表示</button>
+    </div>
+
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>
+                    <a href="?sort=id&order={% if request.GET.sort == 'id' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'id' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        ID
+                        {% if request.GET.sort == 'id' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'id' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=name&order={% if request.GET.sort == 'name' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'name' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        医薬品名
+                        {% if request.GET.sort == 'name' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'name' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>説明</th>
+                <th>包装</th>
+                <th>商品コード</th>
+                <th>
+                    <a href="?sort=category&order={% if request.GET.sort == 'category' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'category' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                    種類
+                        {% if request.GET.sort == 'category' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'category' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=date_created&order={% if request.GET.sort == 'date_created' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'category' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                    作成日時
+                        {% if request.GET.sort == 'date_created' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'date_created' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">最終更新者</th>
+                <th>廃止</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr id="{{ item.id }}" class="{% if item.obsoleted is True %}table-danger{% endif %}" style="cursor:pointer;">
+                <td>{{ item.id }}</td>
+                <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.name }}</td>
+                <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.description|default:'-' }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.package|default:'-' }}</td>
+                <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.product_code }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.category }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.date_created|date:"Y-m-d  H:i:s" }}</td>
+                <td>{{ item.user.last_name|default:"" }} {{ item.user.first_name|default:item.user.username }}</td>
+                <td>{% if item.obsoleted %}はい{% else %}いいえ{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include 'inventory/pagination.html' %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const toggleBtn = document.getElementById('toggleObsoleteBtn');
+  let showObsolete = true; // Initial state is showing obsolete items
+
+  toggleBtn.addEventListener('click', function() {
+      // Toggle the state
+      showObsolete = !showObsolete;
+
+      // Update the button text and color based on the state
+      if (showObsolete) {
+          toggleBtn.innerHTML = `{% bs_icon 'check2-circle' %} 廃止項目を非表示`;
+          toggleBtn.classList.remove('btn-danger');
+          toggleBtn.classList.add('btn-light');
+      } else {
+          toggleBtn.innerHTML = `{% bs_icon 'exclamation-circle' %} 廃止項目を表示`;
+          toggleBtn.classList.remove('btn-light');
+          toggleBtn.classList.add('btn-danger');
+      }
+
+      // Select all rows marked as obsolete
+      const obsoleteRows = document.querySelectorAll('tr.table-danger');
+
+      // Toggle visibility
+      obsoleteRows.forEach(row => {
+          row.style.display = showObsolete ? '' : 'none'; // Show or hide
+      });
+  });
+
+  // Existing script for handling row clicks
+  const rows = document.querySelectorAll("table.table tbody tr");
+
+  rows.forEach(function(row) {
+      row.addEventListener('click', function() {
+          const itemId = this.getAttribute('id');
+          const url = `{% url 'edit-drug-master' 0 %}`.replace('0', itemId);
+          window.location.href = url;
+      });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row">
+    <div class="col-11 col-md-4 mx-auto mt-4">
+        <h4>ログイン</h4>
+        <hr style="text-align:left;margin-left:0">
+        <form method="post">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button class="btn btn-primary">ログイン</button>
+        </form>
+        <div class="pt-3">
+            <small class="text-muted">はじめてご利用の方は<a href="{% url 'signup' %}" class="ml-2">アカウントを作成</a>してください。</small>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

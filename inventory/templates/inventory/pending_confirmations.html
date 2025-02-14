@@ -1,0 +1,59 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">拠点間移動：受領確認待ち</h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/ju-dian-jian-yi-dong" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ID</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">医薬品名</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">数量</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">単位</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">製造番号</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">行先</th>
+                <th style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">作成日時</th>
+                <th style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">出庫側担当者</th>
+            </tr>
+
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr id="{{ item.id }}" style="cursor:pointer;">
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.id }}</td>
+                <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.unit }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.lot }}</td>
+                <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span class="train-destination">{{ item.source_site }} -> {{ item.dest_site }}</span></td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.date_created|date:"Y-m-d H:i:s" }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.user.last_name|default:"" }} {{ item.user.first_name|default:item.user.username }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include 'inventory/pagination.html' %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rows = document.querySelectorAll("table.table tbody tr");
+
+        rows.forEach(function(row) {
+            row.addEventListener('click', function() {
+                const itemId = this.getAttribute('id');
+                const url = `{% url 'confirm_transfer' 0 %}`.replace('0', itemId);
+                window.location.href = url;
+            });
+        });
+    });
+</script>
+{% endblock %}

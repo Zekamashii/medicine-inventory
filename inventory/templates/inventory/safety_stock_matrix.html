@@ -1,0 +1,72 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">定数設定</h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/masut#ding-shu-she-ding-quan-yu" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>医薬品名</th>
+                    {% for site in sites %}
+                        <th class="site-column">{{ site.name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in matrix %}
+                    <tr>
+                        <td>{{ row.drug.id }}</td>
+                        <td>{{ row.drug.name }}</td>
+                        {% for form in row.forms %}
+                            <td>{{ form.id }} {{ form.min_stock }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="form-group mt-2">
+        <button type="submit" class="btn btn-primary">変更を保存</button>
+        {% if request.user.is_superuser %}
+            <a href="{% url 'populate-safety-stock' %}" class="btn btn-danger">Populate</a>
+        {% endif %}
+        <a href="javascript:history.back()" class="btn text-body-tertiary">キャンセル</a>
+            </div>
+    </form>
+</div>
+
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    input[type="number"] {
+        width: 50px; /* Fixed width for number inputs */
+        border: 1px solid #ccc;
+        padding: 5px;
+        text-align: center;
+    }
+    .site-column {
+    width: 100px;
+    }
+</style>
+{% endblock content %}

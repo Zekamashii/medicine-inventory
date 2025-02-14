@@ -1,0 +1,14 @@
+{% extends "inventory/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-11 col-md-6 mx-auto mt-4">
+        <h4>ログアウトしました。</h4>
+        <div class="border-top pt-3">
+            <form action="{% url 'login' %}" method="get">
+                <button type="submit" class="btn btn-primary">再度ログイン</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

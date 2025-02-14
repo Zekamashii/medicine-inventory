@@ -1,0 +1,195 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">予測残数：<span style="color: #2c3e50; font-weight: bold;">{{ selected_site_name }}</span>、{{ start_date|date:"Y-m-d" }} ~ {{ end_date|date:"Y-m-d" }} ({{ period_days }} 日間)</h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/yu-ce-can-shu" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <div class="d-flex flex-nowrap align-items-center mb-3 no-print" style="flex-wrap: nowrap;">
+        <!-- Period Selection Form -->
+        <div class="d-flex align-items-center me-3" style="white-space: nowrap;">
+            <form id="periodForm" method="GET" action="" class="d-flex align-items-center">
+                <label for="periodSelect" class="d-inline mb-0">予測期間：</label>
+                <!-- Include hidden input for historical_period to preserve its value -->
+                <input type="hidden" name="historical_period" value="{{ historical_period }}">
+                <select class="form-select" name="period" id="periodSelect"
+                        onchange="document.getElementById('periodForm').submit();" style="width: 150px;">
+                    <option disabled>期間を選択してください</option>
+                    <option {% if period_days == 14 %}selected{% endif %} value="14">2 週間</option>
+                    <option {% if period_days == 28 %}selected{% endif %} value="28">4 週間</option>
+                    <option {% if period_days == 35 %}selected{% endif %} value="35">5 週間</option>
+                    <option {% if period_days == 42 %}selected{% endif %} value="42">6 週間</option>
+                </select>
+            </form>
+        </div>
+
+        <!-- Historical Period Selection Form -->
+        <div class="d-flex align-items-center" style="white-space: nowrap;">
+            <form id="historicalPeriodForm" method="GET" action="" class="d-flex align-items-center">
+                <label for="historicalPeriodSelect" class="d-inline mb-0">出庫数計算期間：</label>
+                <!-- Include hidden input for period to preserve its value -->
+                <input type="hidden" name="period" value="{{ period_days }}">
+                <select class="form-select" name="historical_period" id="historicalPeriodSelect"
+                        onchange="document.getElementById('historicalPeriodForm').submit();" style="width: 150px;">
+                    <option disabled>期間を選択してください</option>
+                    <option {% if historical_period == 14 %}selected{% endif %} value="14">過去2週間</option>
+                    <option {% if historical_period == 28 %}selected{% endif %} value="28">過去1ヶ月</option>
+                    <option {% if historical_period == 56 %}selected{% endif %} value="56">過去2ヶ月</option>
+                    <option {% if historical_period == 84 %}selected{% endif %} value="84">過去3ヶ月</option>
+                </select>
+            </form>
+        </div>
+
+        <!-- Buttons pushed to the right -->
+        <div class="ms-auto">
+            <button id="printBtn" class="btn btn-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                    title="カスタマイズされたレイアウトで印刷する">{% bs_icon 'printer' %} 印刷</button>
+            <button id="copyBtn" class="btn btn-light" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                    title="薬品名と現在庫数をクリップボードにコピーする">{% bs_icon 'copy' %} コピー</button>
+        </div>
+    </div>
+
+    <table class="table-auto" id="inventory-table">
+        <thead>
+            <tr>
+                <th style="border: 1px solid #ddd; text-align: left; padding: 8px; background-color: #f2f2f2;">医薬品名・種類</th>
+                <th style="border: 1px solid #ddd; text-align: left; padding: 8px; background-color: #f2f2f2;">定数</th>
+                <th style="border: 1px solid #ddd; text-align: left; padding: 8px; background-color: #f2f2f2;">余剰</th>
+                <th style="border: 1px solid #ddd; text-align: left; padding: 8px; background-color: #f2f2f2;">今日<br>{{ periods.0.0|date:"m/d" }}</th>
+                {% for period in periods|slice:"1:" %}
+                    <th class="hide-in-print" style="border: 1px solid #ddd; text-align: left; padding: 8px; background-color: #f2f2f2;" colspan="1">
+                        {% with week_number=forloop.counter %}
+                            {{ week_number }} 週間後
+                            <br>
+                            ({{ period.0|date:"m/d" }} - {{ period.1|date:"m/d" }})
+                        {% endwith %}
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for category, items in inventory_by_period.items %}
+                <tr class="category-row">
+                    <td style="border: 1px solid #ddd; text-align: left; padding: 8px; font-weight: bold; background-color: #2fc3a6;">{{ category }}</td>
+                </tr>
+                {% for item, details in items.items %}
+                    <tr class="data-row">
+                        <td style="border: 1px solid #ddd; text-align: left; padding: 8px; padding-left: 20px; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: normal;">{{ item }}</td>
+                        <td style="border: 1px solid #ddd; text-align: left; padding: 8px;">{{ details.safety_stock }}</td>
+                        <td style="border: 1px solid #ddd; text-align: left; padding: 8px; background-color: {% if details.difference < 0 %}#ffcccb{% else %}#d6eaf8{% endif %};">{{ details.difference }}</td>
+                        <td style="max-width: 20px; overflow: hidden; text-overflow: ellipsis; white-space: normal; border: 1px solid #ddd; text-align: left; padding: 8px;" colspan="1">{{ details.periods.0.Quantity }}</td>
+                        {% for period_detail in details.periods|slice:"1:" %}
+                            <td class="hide-in-print" style="max-width: 20px; overflow: hidden; text-overflow: ellipsis; white-space: normal; border: 1px solid #ddd; text-align: left; padding: 8px;">{{ period_detail.Quantity }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .table-auto {
+        table-layout: auto;
+        width: 100%;
+    }
+
+    .table-auto th {
+        border: 1px solid #ddd;
+        text-align: left;
+        padding: 8px;
+        background-color: #f2f2f2;
+    }
+
+    @page {
+        margin-top: 10px !important;
+    }
+
+    @media print {
+        .container-fluid, .main-content, .table-auto {
+            width: 100% !important;
+        }
+
+        .hide-in-print {
+            display: none !important;
+        }
+
+        .main-content {
+            margin: 10px !important;
+            width: calc(100% - 20px) !important;
+            padding: 0 !important;
+        }
+
+        .table-auto {
+            width: 100%;
+            padding: 4px;
+        }
+
+        .table-auto th, .table-auto td {
+            font-size: 10pt;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+        .container-fluid::after {
+            content: "UNCONTROLLED WHEN PRINTED. Generated by {{ username }} on {{ current_time }}.";
+            position: fixed;
+            bottom: 0px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10pt;
+            color: #000;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        document.getElementById('printBtn').addEventListener('click', function() {
+            window.print();
+        });
+
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            var table = document.getElementById('inventory-table');
+            var rowData = [];
+            var rows = table.getElementsByClassName('data-row'); // Get all data rows
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].cells;
+                var drugName = cells[0].innerText;
+                var firstQuantity = cells[3].innerText;
+                rowData.push([drugName, firstQuantity].join('\t'));
+            }
+            var allRowsString = rowData.join('\n');
+            navigator.clipboard.writeText(allRowsString).then(function() {
+                alert('医薬品名と現在庫数をクリップボードにコピーしました。');
+            }).catch(function(err) {
+                console.error('コピーできませんでした: ', err);
+            });
+        });
+
+        // Add event listeners to the dropdowns
+        document.getElementById('periodSelect').addEventListener('change', function() {
+            document.getElementById('combinedForm').submit();
+        });
+
+        document.getElementById('historicalPeriodSelect').addEventListener('change', function() {
+            document.getElementById('combinedForm').submit();
+        });
+    });
+</script>
+{% endblock content %}

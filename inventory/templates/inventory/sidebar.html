@@ -1,0 +1,66 @@
+{% load bootstrap_icons %}
+{% load static %}
+
+<div class="sidebar d-flex flex-column justify-content-between">
+    <div>
+        <a href="{% url 'dashboard' %}" data-key="1" title="Ctrl(⌃)-1" class="{% if 'dashboard' in request.path %}active{% endif %}">{% bs_icon 'speedometer' %} 在庫一覧</a>
+        <a href="{% url 'transactions' %}" data-key="2" title="Ctrl(⌃)-2" class="{% if 'transactions' in request.path or 'validation' in request.path %}active{% endif %}">{% bs_icon 'piggy-bank' %} 履歴照会</a>
+        <a href="{% url 'inspection' %}" data-key="3" title="Ctrl(⌃)-3" class="{% if 'inventory-inspection' in request.path or 'inspection-history' in request.path or 'batch-adjustment' in request.path %}active{% endif %}">{% bs_icon 'clipboard-check' %} 実数カウント</a>
+        <a href="{% url 'calendar-view' %}" data-key="4" title="Ctrl(⌃)-4" class="{% if 'calendar-view' in request.path %}active{% endif %}">{% bs_icon 'calendar-range' %} 予測残数</a>
+
+        <div class="dropdown-center">
+              <a class="nav-link dropdown-toggle {% if 'drugs' in request.path or 'categories' in request.path or 'sites' in request.path or 'users' in request.path %}active{% endif %}" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                {% bs_icon 'gear' %} 設定
+              </a>
+
+            <div class="dropdown-menu">
+                <a href="{% url 'drugs' %}" data-key="5" title="Ctrl(⌃)-5">{% bs_icon 'prescription' %} 医薬品マスター</a>
+                <a href="{% url 'categories' %}" data-key="6" title="Ctrl(⌃)-6">{% bs_icon 'capsule-pill' %} 医薬品種類</a>
+                <a href="{% url 'sites' %}" data-key="7" title="Ctrl(⌃)-7">{% bs_icon 'diagram-3' %} 拠点管理</a>
+                {% if request.user.is_superuser %}
+                    <div class="dropdown-divider"></div>
+                    <a href="{% url 'users' %}">{% bs_icon 'people' %} ユーザー一覧</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru" target="_blank" data-key="8" title="Ctrl(⌃)-H" class="highlight-manual">{% bs_icon 'life-preserver' %} マニュアル</a>
+        <!-- Add more links as needed -->
+    </div>
+
+    <div>
+        {% include 'inventory/bottom.html' %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey) {
+            // Define key mappings for the sidebar menu items
+            var keyMap = {
+                '1': document.querySelector('a[data-key="1"]'),
+                '2': document.querySelector('a[data-key="2"]'),
+                '3': document.querySelector('a[data-key="3"]'),
+                '4': document.querySelector('a[data-key="4"]'),
+                '5': document.querySelector('a[data-key="5"]'),
+                '6': document.querySelector('a[data-key="6"]'),
+                '7': document.querySelector('a[data-key="7"]'),
+                'h': document.querySelector('a[data-key="8"]')
+            };
+
+            // Check if the pressed key is in the key map
+            var key = event.key.toLowerCase();
+            if (event.key in keyMap) {
+                var link = keyMap[event.key];
+                if (link) {
+                    if (key === 'h') {
+                        window.open(link.href, '_blank');
+                    } else {
+                        window.location.href = link.href;
+                    }
+                }
+            }
+        }
+    });
+</script>
+

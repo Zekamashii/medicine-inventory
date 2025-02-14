@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#07DECC">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="googlebot" content="noindex, nofollow">
+    <title>CK-Stock {% if selected_site_name %} - {{ selected_site_name }}{% endif %}</title>
+    <link href="{% static 'inventory/bootstrap.css' %}" rel="stylesheet">
+    <link href="{% static 'inventory/style.css' %}" rel="stylesheet">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/favicon.png' %}" >
+</head>
+<body>
+<div class="container-fluid">
+    {% if user.is_authenticated %}
+        <div id="sidebar" class="no-print">
+            {% include 'inventory/sidebar.html' %}
+        </div>
+    {% endif %}
+
+    <div id="navbar" class="no-print">
+        {% include 'inventory/navigation.html' %}
+    </div>
+
+    <div class="main-content" style="margin-left: 200px; margin-top: 30px;">
+        {% block content %}
+        <!-- Main content goes here -->
+        {% endblock content %}
+    </div>
+</div>
+    <script src="{% static 'inventory/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'inventory/jquery-3.7.1.min.js' %}"></script>
+</html>

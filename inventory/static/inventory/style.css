@@ -1,0 +1,57 @@
+.sidebar {
+    height: 100vh; /* Full height */
+    width: 220px; /* Sidebar width */
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 1; /* Stay on top */
+    top: 0; /* Stay at the top */
+    left: 0;
+    background-color: #f8f9fa; /* Light grey background */
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 60px;
+ }
+
+.sidebar a {
+    padding: 10px 15px;
+    text-decoration: none;
+    font-size: 18px;
+    color: #333;
+    display: block;
+}
+
+.sidebar a:hover {
+    color: #0056b3; /* Bootstrap primary color for hover */
+}
+
+.sidebar a svg {
+    vertical-align: baseline;
+}
+
+.active {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+.main-content {
+    margin-left: 240px; /* Same as the width of the sidebar */
+    padding: 20px;
+}
+
+.alert {
+    text-align: left; /* Ensure text is aligned to the left */
+}
+
+.highlight-discrepancy {
+    background-color: #f1b97a;
+}
+
+.highlight-manual {
+    background-color: #ffff00; /* Yellow background */
+    font-weight: bold;
+    padding: 5px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.highlight-manual:hover {
+    background-color: #ffa500; /* Orange background on hover */
+}

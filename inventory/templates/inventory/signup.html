@@ -1,0 +1,37 @@
+{% extends "inventory/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row">
+    <div class="col-11 col-md-4 mx-auto mt-4">
+        <h4>会員登録</h4>
+        <hr style="text-align:left;margin-left:0">
+        {% if forms.errors %}
+        {% for field in form %}
+        {% for error in field.errors %}
+        <div class="alert alert-danger">
+            <strong>{{ error|escape }}</strong>
+        </div>
+        {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+        <div class="alert alert-danger">
+            <strong>{{ error|escape }}</strong>
+        </div>
+        {% endfor %}
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            {{ form|crispy }}
+
+            <button class="btn btn-primary" type="submit">次へ</button>
+        </form>
+        <div class="pt-3">
+            <small class="text-muted">すでにアカウントをお持ちですか？
+                <a href="{% url 'login' %}" class="ml-2">ログイン</a>
+            </small>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

@@ -1,0 +1,25 @@
+<footer class="footer">
+    <div class="container text-center mb-3">
+    </div>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var currentYear = new Date().getFullYear(); // Gets the current year
+        document.getElementById('current-year').textContent = currentYear; // Sets the current year in the span
+    });
+</script>
+
+<style>
+    .footer a.github-icon {
+        display: inline-block; /* Make sure the link area is limited to the SVG size */
+    }
+
+    .footer .text-muted .clickable-heart {
+        cursor: pointer; /* Make the heart cursor a pointer to indicate it's clickable */
+        text-decoration: none;
+        color: inherit;
+        margin-left: 2px; /* Adjust the margin to control spacing */
+        margin-right: 2px; /* Adjust the margin to control spacing */
+    }
+</style>

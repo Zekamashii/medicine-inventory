@@ -1,0 +1,189 @@
+{% load bootstrap_icons %}
+{% load static %}
+
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg" style="position: fixed; top: 0; left: 0; width: 100%; z-index: 2; background-color: {{ selected_site_color|default:'#ECF0F1' }}; box-shadow: 0 2px 4px rgba(0,0,0,.2); height: 50px;">
+        <a class="navbar-brand" href="{% url 'index' %}">
+            <img src="{% static 'images/favicon.png' %}" alt="Logo" style="height: 30px; margin-left: 10px; margin-right: 10px;">
+            CK-Stock 医薬品在庫管理システム
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+            <ul class="navbar-nav">
+                {% if user.is_authenticated %}
+                {% if 'dashboard' in request.path or 'transactions' in request.path or 'calendar-view' in request.path or 'validation' in request.path or 'inventory-inspection' in request.path or 'inspection-history' in request.path or 'batch-adjustment' in request.path or request.path == '/' %}
+                    {% if 'cancel' not in request.path and 'confirm' not in request.path %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="suggestionBox">
+                                <span class="badge bg-danger" id="suggestedSiteName" style="font-size: 1.25rem; line-height: 1.2; padding: 0.1rem 0.5rem;">-</span>
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="badge bg-warning" id="selectedSiteName" style="font-size: 1.25rem; line-height: 1.2; padding: 0.1rem 0.5rem;">拠点を選択</span>
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <li><a class="dropdown-item site-item" href="?site=ALL" data-lat="0" data-lon="0">全拠点</a></li>
+                                {% for site in sites %}
+                                    <li><a class="dropdown-item site-item" href="?site={{ site.id }}" data-lat="{{ site.latitude }}" data-lon="{{ site.longitude }}">{{ site.name }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endif %}
+                {% endif %}
+
+                <!-- Updated Message Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {% bs_icon 'envelope' %} 確認待ち
+                        {% if pending_confirmations_count > 0 %}
+                            <span class="badge bg-danger">{{ pending_confirmations_count }}</span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown">
+                        {% if pending_confirmations %}
+                            {% for confirmation in pending_confirmations|slice:":5" %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'confirm_transfer' pk=confirmation.id %}">
+                                        {{ confirmation.name }} - {{ confirmation.quantity }} {{ confirmation.unit }}（
+                                        <span style="color: {{ confirmation.source_site.color }};">
+                                            {{ confirmation.source_site }}
+                                        </span>から）
+                                    </a>
+                                </li>
+                            {% endfor %}
+                            {% if pending_confirmations|length > 0 %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'pending_confirmations' %}">全院の確認待ちを見る</a></li>
+                            {% endif %}
+                        {% else %}
+                            <li><a class="dropdown-item" href="{% url 'pending_confirmations' %}">確認待ちの拠点間移動はありません</a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'edit-user' pk=user.pk %}">{% bs_icon 'person-circle' %} {{ user.last_name|default:"" }} {{ user.first_name|default:user.username }}</a>
+                </li>
+                <li class="nav-item">
+                    <form action="{% url 'logout' %}" method="post" class="nav-link" style="margin:0;">
+                        {% csrf_token %}
+                        <button type="submit"
+                                style="background:none; border:none; padding:0; margin:0; color:inherit; font:inherit; line-height:inherit; display:inline;">
+                            {% bs_icon 'box-arrow-in-left' %} ログアウト
+                        </button>
+                    </form>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">{% bs_icon 'box-arrow-in-right' %} ログイン</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'signup' %}">{% bs_icon 'emoji-heart-eyes' %} 会員登録(無料)</a>
+                </li>
+            {% endif %}
+            </ul>
+        </div>
+    </nav>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Radius of the earth in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Distance in km
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectedSiteId = getCookie('selectedSite');
+        let selectedSiteName = "Select Site";
+
+        document.querySelectorAll('.site-item').forEach(function (item) {
+            const siteId = item.getAttribute('href').split('=')[1];
+            const siteName = item.textContent;
+            if (siteId === selectedSiteId || (selectedSiteId === undefined && siteId === 'ALL')) {
+                selectedSiteName = siteName;
+                document.getElementById('selectedSiteName').textContent = selectedSiteName;
+            }
+
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (siteId === 'ALL') {
+                    document.cookie = "selectedSite=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT";
+                } else {
+                    document.cookie = "selectedSite=" + siteId + ";path=/";
+                }
+                window.location.href = this.getAttribute('href');
+            });
+        });
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const userLat = position.coords.latitude;
+                const userLon = position.coords.longitude;
+
+                let nearestSite = null;
+                let minDistance = Infinity;
+
+                document.querySelectorAll('.site-item').forEach(function (item) {
+                    const siteLat = parseFloat(item.getAttribute('data-lat'));
+                    const siteLon = parseFloat(item.getAttribute('data-lon'));
+
+                    const distance = calculateDistance(userLat, userLon, siteLat, siteLon);
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestSite = item;
+                    }
+                });
+
+                // Show suggestion box if the nearest site is within the threshold distance
+                if (nearestSite && minDistance < 1) {  // Adjust the threshold as needed
+                    const suggestionBox = document.getElementById('suggestionBox');
+                    const suggestedSiteName = document.getElementById('suggestedSiteName');
+                    suggestedSiteName.textContent = '最寄拠点：' + nearestSite.textContent + '（' + (Math.round(minDistance * 10) / 10) + 'km）に切り替える';
+                    suggestionBox.style.display = 'inline-block';
+
+                    suggestionBox.addEventListener('click', function () {
+                        // Simulate the same action as selecting a site from the dropdown
+                        const siteId = nearestSite.getAttribute('href').split('=')[1];
+                        if (siteId === 'ALL') {
+                            document.cookie = "selectedSite=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT";
+                        } else {
+                            document.cookie = "selectedSite=" + siteId + ";path=/";
+                        }
+                        window.location.href = nearestSite.getAttribute('href');
+                    });
+                }
+            }, function (error) {
+                console.error('Error getting geolocation: ', error);
+            });
+        } else {
+            console.error('Geolocation is not supported by this browser.');
+        }
+    });
+</script>

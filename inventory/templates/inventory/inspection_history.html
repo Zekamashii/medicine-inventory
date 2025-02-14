@@ -1,0 +1,144 @@
+{% extends 'inventory/base.html' %}
+{% load custom_filters %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">実数カウント履歴：<span style="color: #2c3e50;font-weight: bold;">{{ selected_site_name }}</span></h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/kaunto#kaunto" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+            <a href="{% url 'inspection' %}" class="btn btn-sm btn-primary">実数カウントに戻る</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    {% if historical_records %}
+        <ul class="nav nav-tabs" id="inspectionTabs" role="tablist">
+            {% for inspection_time, records in historical_records.items %}
+                {% if forloop.counter <= 9 %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if forloop.first %}active{% endif %}"
+                                id="date-{{ forloop.counter }}-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#date-{{ forloop.counter }}"
+                                type="button"
+                                role="tab"
+                                aria-controls="date-{{ forloop.counter }}"
+                                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                            {{ inspection_time|date:"n/j H:i" }}
+                        </button>
+                    </li>
+                {% elif forloop.counter == 10 %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">もっと見る</a>
+                        <ul class="dropdown-menu">
+                {% endif %}
+                {% if forloop.counter > 9 %}
+                    <li><a class="tab-dropdown-item" data-bs-toggle="tab" href="#date-{{ forloop.counter }}">{{ inspection_time|date:"n/j H:i" }}</a></li>
+                {% endif %}
+                {% if forloop.last and forloop.counter > 9 %}
+                        </ul>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+
+        <div class="tab-content" id="inspectionTabContent">
+            {% for inspection_time, records in historical_records.items %}
+                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                     id="date-{{ forloop.counter }}"
+                     role="tabpanel"
+                     aria-labelledby="date-{{ forloop.counter }}-tab">
+                    <table class="table-auto mt-3">
+                        <thead>
+                            <tr>
+                                <th>医薬品名</th>
+                                <th>当時のシステム在庫数</th>
+                                <th>保存した実数</th>
+                                <th>在庫差異</th>
+                                <th>検査者</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr>
+                                    <td>{{ record.drug_name }}</td>
+                                    <td>{{ record.expected_quantity }}</td>
+                                    <td>{{ record.actual_quantity }}</td>
+                                    <td>{{ record.discrepancy }}</td>
+                                    <td>{{ record.username }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>😅ここには何もありません。たぶん、宇宙人がデータを盗んだかも？🛸</p>
+    {% endif %}
+</div>
+
+<style>
+    .table-auto {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #fff; /* Ensures the table background is white */
+    }
+
+    .table-auto th {
+        border: 1px solid #ddd;
+        text-align: left;
+        padding: 8px;
+        background-color: #f2f2f2; /* Sets a grey background for table headers */
+        font-weight: bold; /* Makes the header text bold */
+        font-family: Arial, sans-serif; /* Sets a standard font */
+    }
+
+    .table-auto td {
+        border: 1px solid #ddd;
+        text-align: left;
+        padding: 8px;
+        background-color: #fff; /* Ensures the cell background is white */
+        font-weight: normal; /* Ensures the text is not bold */
+        font-family: Arial, sans-serif; /* Sets a standard font */
+    }
+
+    .nav-tabs .nav-link {
+        color: #495057;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+    }
+
+    .tab-content > .tab-pane {
+        background-color: #fff; /* Ensures the tab pane background is white */
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-top: none;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Handle dropdown item clicks
+    document.querySelectorAll('.tab-dropdown-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            var tabId = this.getAttribute('href');
+            var tab = new bootstrap.Tab(document.querySelector(tabId + '-tab'));
+            tab.show();
+        });
+    });
+});
+</script>
+
+{% endblock content %}

@@ -1,0 +1,13 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h4>すべての医薬品および拠点の安全在庫を設定する</h4>
+    <hr style="text-align:left;margin-left:0">
+    <h5>Developer Comment: The safety stock must exist for each drug and each site. <br/>The system will automatically create safety stock for all newly created drugs and sites but not existed ones.</h5>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" name="populate" class="btn btn-danger">GO</button>
+    </form>
+</div>
+{% endblock content %}

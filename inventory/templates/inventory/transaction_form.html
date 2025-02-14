@@ -1,0 +1,458 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0"><span style="color: red;">{{type_label}}</span>を登録</h5>
+            {% if type_label == '入庫' %}
+                <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/ru-ku" class="text-muted ms-2" target="_blank">
+                    {% bs_icon 'question-circle' %}
+                </a>
+            {% elif type_label == '出庫' %}
+                <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/chu-ku" class="text-muted ms-2" target="_blank">
+                    {% bs_icon 'question-circle' %}
+                </a>
+            {% elif type_label == '拠点間移動' %}
+                <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/ju-dian-jian-yi-dong" class="text-muted ms-2" target="_blank">
+                    {% bs_icon 'question-circle' %}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+    <form method="post" enctype="multipart/form-data" id="transactionForm" action="{{ form_action_url }}" autocomplete="off">
+
+        <!-- Error Messages Container -->
+        <div id="errorMessagesContainer"></div>
+
+        {% if 'inbound' in request.path or 'outbound' in request.path %}
+        <div class="form-group text-end">
+            <button type="button" id="switchTransactionType" class="btn btn-light">{% bs_icon 'arrow-left-right' %} {{ switch_name }}に切り替える</button>
+        </div>
+        {% endif %}
+
+        <input type="hidden" name="action" value="">
+
+        <!-- Scanner Mode Toggle -->
+        <div class="form-group mb-2">
+            <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="scannerModeToggle"
+                       data-scanner-enabled="{{ scanner_mode_enabled|yesno:'true,false' }}"
+                       value="{{ form.initial.scanner_mode_enabled }}">
+                <label class="custom-control-label" for="scannerModeToggle">スキャナーモード</label>
+            </div>
+        </div>
+
+        <!-- Scanned Data Input -->
+        <div class="form-group mb-2">
+            <label for="scannedDataInput" class="mb-1">バーコードの読み取りボックス</label>
+            <div class="input-group mb-1" >
+                <input type="password" class="form-control me-2" id="scannedDataInput" name="scannedData"
+                       autocomplete="one-time-code" placeholder="ここでバーコードをスキャンする" disabled>
+                <div class="input-group-append">
+                    <button class="btn btn-dark" type="button" id="clearScannedData" style="position: relative; z-index: 1;">{% bs_icon 'x-circle' %} クリア</button>
+                </div>
+            </div>
+            <small id="scannedDataHelp" class="form-text text-muted">スキャナーモードを使用する際には、この読み取りボックスが選択されていることを確認してください。</small>
+        </div>
+
+        {% csrf_token %}
+        {{ form|crispy }}
+
+        <div class="form-group">
+            <!-- Loading Button -->
+            <button id="loadingButton" class="btn btn-primary d-none" type="button" disabled>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                ローディング...
+            </button>
+
+            <!-- Success Icon -->
+            <button id="successButton" class="btn btn-success d-none flashing" type="button" disabled>
+                <span class="bi bi-check-circle" role="status" aria-hidden="true"></span>
+                {% bs_icon 'rocket-takeoff' %} 成功しました！
+            </button>
+
+            <button id="submitButton" type="submit" class="btn btn-primary">提出</button>
+            <button type="submit" name="action" value="add_more" class="btn btn-secondary">さらに追加</button>
+            <a href="javascript:history.back()" class="btn text-body-tertiary">キャンセル</a>
+        </div>
+    </form>
+</div>
+
+<div id="toastContainer" class="toast-container position-fixed bottom-10 end-0 p-10" style="bottom: 20rem;">
+    <!-- Toasts will be dynamically added here -->
+</div>
+
+{% load static %}
+<script src="{% static 'inventory/jquery-3.7.1.min.js' %}"></script>
+
+<script>
+    $(document).ready(function () {
+        function toggleSiteFields() {
+            var transactionType = $('#id_type').val();
+            switch (transactionType) {
+                case 'I':
+                    $('#div_id_source_site').hide(); // Adjust these selectors based on your actual rendered HTML
+                    $('#div_id_dest_site').show();
+                    break;
+                case 'O':
+                    $('#div_id_source_site').show();
+                    $('#div_id_dest_site').hide();
+                    break;
+                case 'T':
+                    $('#div_id_source_site').show();
+                    $('#div_id_dest_site').show();
+                    break;
+                default:
+                    $('#div_id_source_site').hide();
+                    $('#div_id_dest_site').hide();
+            }
+        }
+
+        // Initial call to set the correct state when the form is first loaded
+        toggleSiteFields();
+
+        // Set up an event listener for changes to the type field
+        $('#id_type').change(function () {
+            toggleSiteFields();
+        });
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var switchTransactionType = document.getElementById('switchTransactionType');
+    // Check if the element exists
+    if (switchTransactionType) {
+        switchTransactionType.addEventListener('click', function() {
+            window.location.href = "{% url switch_url %}";
+        });
+    } else {
+
+    }
+});
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const transactionType = document.querySelector('select[name="type"]');
+        const categorySelect = document.querySelector('select[name="category"]');
+        const drugSelect = document.querySelector('select[name="name"]');
+        const siteSelect = document.querySelector('select[name="source_site"]');
+        const lotSelect = document.querySelector('select[name="lot"]');
+
+        function updateDrugs() {
+            const categoryId = categorySelect.value;
+            fetch(`/ajax/filtered-drugs/?categoryId=${categoryId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    drugSelect.innerHTML = "";
+                    drugSelect.options.add(new Option("医薬品を選択してください", ""));
+                    data.forEach(function (drug) {
+                        drugSelect.options.add(new Option(drug.name, drug.id));
+                    });
+                })
+                .catch((error) => console.log("Error:", error));
+        }
+
+        function updateLots() {
+            return new Promise((resolve, reject) => {
+                const transactionTypeValue = transactionType.value; // Ensure transactionType is defined and accessible
+                if (transactionTypeValue === "O" || transactionTypeValue === "T") {
+                    const drugId = drugSelect.value;
+                    const siteId = siteSelect.value;
+
+                    fetch(`/ajax/get_filtered_lots/?drugId=${drugId}&siteId=${siteId}`)
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error("Network response was not ok"); // Throw error on bad response
+                            }
+                            return response.json();
+                        })
+                        .then((data) => {
+                            lotSelect.innerHTML = ""; // Reset options
+                            let earliestExpiryDate = null;
+
+                            data.forEach((lot) => {
+                                lotSelect.options.add(new Option(`${lot.lot} | 使用期限：${lot.expire_date}`, lot.id));
+                                const lotExpiryDate = new Date(lot.expire_date);
+                                if (!earliestExpiryDate || lotExpiryDate < earliestExpiryDate) {
+                                    earliestExpiryDate = lotExpiryDate;
+                                }
+                            });
+
+                            const now = new Date();
+                            const XDaysLater = new Date(now.setDate(now.getDate() + 180));
+                            if (earliestExpiryDate && earliestExpiryDate < XDaysLater && transactionTypeValue === "O") {
+                                showToast(`${earliestExpiryDate.toLocaleDateString()}より前に期限切れになる在庫があります。製造番号の選択を慎重に見直してください。`, "warning");
+                            }
+
+                            resolve(); // Resolve the promise when done processing data
+                        })
+                        .catch((error) => {
+                            console.error("Error fetching lots:", error);
+                            reject(error); // Reject the promise on error
+                        });
+                } else {
+                    resolve(); // Resolve the promise when transaction type is not 'O' or 'T'
+                }
+            });
+        }
+
+        categorySelect.addEventListener("change", updateDrugs);
+
+        drugSelect.addEventListener("change", function () {
+            if (transactionType.value === "O" || transactionType.value === "T") {
+                updateLots();
+            }
+        });
+
+        document.addEventListener("change", function (event) {
+            const target = event.target;
+            if (target.name === "source_site") {
+                if (transactionType.value === "O" || transactionType.value === "T") {
+                    updateLots();
+                }
+            }
+        });
+
+        $(document).ready(function () {
+            const UserToggle = $("#scannerModeToggle").val() === "True";
+            let scannerModeEnabled = false;
+
+            if (UserToggle) {
+                scannerModeEnabled = true;
+            }
+
+            $("#scannerModeToggle").prop("checked", scannerModeEnabled);
+            $("#scannedDataInput").prop("disabled", !scannerModeEnabled);
+
+            if (scannerModeEnabled) {
+                $("#scannedDataInput").focus().addClass("highlight");
+            } else {
+                $("#scannedDataInput").removeClass("highlight");
+            }
+
+            // Event listener for changes to the scannerModeToggle checkbox
+            $("#scannerModeToggle").change(function () {
+                scannerModeEnabled = this.checked; // Update scannerModeEnabled based on the new state of the checkbox
+                $("#scannedDataInput").prop("disabled", !scannerModeEnabled); // Enable or disable based on the new state
+                if (scannerModeEnabled) {
+                    $("#scannedDataInput").focus().addClass("highlight");
+                } else {
+                    $("#scannedDataInput").removeClass("highlight");
+                }
+            });
+
+            function debounce(func, wait) {
+                let timeout;
+
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
+            $("#scannedDataInput").on("input", function () {
+                let scannedData = $(this).val().trim();
+                if (scannedData !== "") {
+                    processScanDebounced(scannedData);
+                }
+            });
+
+            function clearInputFields() {
+                $("#scannedDataInput").val("").focus(); // Clear the input and put the focus back on it
+                $("#id_name, #id_quantity, #id_lot, #id_expire_date").val(""); // Clear other fields
+            }
+
+            $("#clearScannedData").click(function () {
+                clearInputFields();
+            });
+
+            const processScanDebounced = debounce(function (scannedData) {
+                processScan(scannedData);
+            }, 300);
+
+            function processScan(scannedData) {
+                $.ajax({
+                    url: "{% url 'databar_parser' %}",
+                    type: "GET",
+                    data: { scanned_data: scannedData },
+                    dataType: "json",
+                    success: async function (data) {
+                        // Auto-populate form fields based on the response
+                        if (data.drug_id) {
+                            $("#id_name").val(data.drug_id).trigger("change");
+                            $("#scannedDataInput").val("").focus();
+                        }
+                        if (data.expire_date) {
+                            $("#id_expire_date").val(data.expire_date);
+                        }
+                        if (data.lot) {
+                            var $lotDropdown = $("#id_lot");
+                            await updateLots();
+
+                            if ($lotDropdown.length && $lotDropdown.prop("tagName") === "SELECT") {
+                                var $matchingOption = $lotDropdown.find("option").filter(function () {
+                                    return $(this).text().split("|")[0].trim() === data.lot.trim();
+                                });
+                                if ($matchingOption.length) {
+                                    $matchingOption.text(data.lot + " | " + $matchingOption.text().split("|")[1]);
+                                    $lotDropdown.val($matchingOption.val()); // Keep the original value
+                                    $lotDropdown.trigger("change");
+                                } else {
+                                    showToast(`その製造番号に一致するオプションが見つかりませんでした：${data.lot}。`, "warning");
+                                }
+                            } else if (transactionType.value === "I") {
+                                $lotDropdown.val(data.lot);
+                            }
+                        }
+                        if (data.quantity) {
+                            $("#id_quantity").val(data.quantity);
+                        }
+                        if (data.error) {
+                            showToast(data.error, "error");
+                        }
+
+                        if ($("#id_name").val() && $("#id_lot").val() && $("#id_expire_date").val() && $("#id_quantity").val() && transactionType.value === "I") {
+                            showToast("自動的に送信されました。", "success");
+                            $("input[name='action']").val("add_more");
+                            $("#transactionForm").submit();
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        $("#error_message").text("Failed to process scanned data. Please try again.").show();
+                    },
+                });
+            }
+        });
+    });
+
+    $(document).ready(function () {
+        $('#transactionForm').on('submit', function (event) {
+            event.preventDefault();
+            var formData = new FormData(this);
+            var actionUrl = $(this).attr('action');
+            var isAddMore = $("input[name='action']").val() === "add_more";
+
+            $('#submitButton').addClass('d-none');
+            $('#loadingButton').removeClass('d-none');
+
+            $.ajax({
+                type: "POST",
+                url: actionUrl,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    setTimeout(function() {
+                        $('#loadingButton').addClass('d-none');
+                        $('#successButton').removeClass('d-none');
+
+                    setTimeout(function() {
+                        $('#successButton').addClass('d-none');
+                        if (isAddMore) {
+                            // Reset form for adding more
+                            $('#transactionForm')[0].reset();
+                            $('#submitButton, button[name="action"][value="add_more"]').removeClass('d-none');
+                        } else {
+                            // Redirect to dashboard for regular submit
+                            window.location.href = "{% url 'dashboard' %}";
+                        }
+                    }, 500);
+                }, 1000);
+                },
+                error: function (xhr, status, error) {
+                    $('#submitButton').removeClass('d-none');
+                    $('#loadingButton').addClass('d-none');
+
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        var errors = xhr.responseJSON.errors;
+                        var errorMessages = [];
+
+                        for (var field in errors) {
+                            if (errors.hasOwnProperty(field)) {
+                                var fieldErrors = errors[field];
+                                for (var i = 0; i < fieldErrors.length; i++) {
+                                    errorMessages.push(fieldErrors[i]);
+                                }
+                            }
+                        }
+
+                        var errorContainer = $('<div class="alert alert-dismissible alert-danger" role="alert"></div>');
+                        errorContainer.append('<button type="button" class="btn-close" data-bs-dismiss="alert"></button>');
+                        errorContainer.append('<h4 class="alert-heading">警告！</h4>');
+                        errorMessages.forEach(function (msg) {
+                            errorContainer.append($('<p></p>').text(msg));
+                        });
+                        $('#transactionForm').prepend(errorContainer);
+                    } else {
+                        alert("送信に失敗しました。もう一度お試しください。");
+                    }
+                }
+            });
+        });
+
+        $('button[name="action"][value="add_more"]').on('click', function() {
+            $("input[name='action']").val("add_more");
+        });
+
+    });
+
+    function showToast(message, type) {
+        const toastContainer = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+
+        const now = new Date();
+        const formattedTime = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
+
+        toast.innerHTML = `
+            <div id="liveToast" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="toast-header">
+                <strong class="me-auto">${type === "success" ? "メイセージ" : "警告"}</strong>
+                  <small>${formattedTime}</small>
+                  <button type="button" class="btn-close ms-2 mb-1" data-bs-dismiss="toast" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+              </div>
+            <div class="toast-body">
+              ${message}
+            </div>
+          </div>
+        `;
+
+        // Append the new toast to the container
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.remove("show");
+            setTimeout(() => toast.remove(), 300); // Allow fade out effect
+        }, 10000);
+    }
+</script>
+
+<style>
+    .highlight {
+        border-color: #fb3b1e;
+        box-shadow: 0 0 0 0.2rem rgba(251, 59, 30, 0.5);
+    }
+
+    @keyframes flash {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .flashing {
+        animation: flash 1s infinite;
+    }
+</style>
+{% endblock content %}

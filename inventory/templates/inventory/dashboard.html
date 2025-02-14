@@ -1,0 +1,350 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">在庫一覧：<span style="color: #2c3e50;font-weight: bold;">{{ selected_site_name }}</span></h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/zai-ku-yi-lan" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <!-- Inventory Summary -->
+    {% if not page_in_path and not search_query %}
+    <div class="row align-items-start mb-4">
+        <div class="col-md-12">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'dashboard' %}" class="text-decoration-none">
+                            <div class="card text-center p-3 inventory-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark">総在庫</h6>
+                                    <h4><span class="badge bg-primary rounded-pill">{{ total_items }}</span></h4>
+                                </div>
+                                <div class="progress-placeholder"></div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="{% url 'dashboard' %}?filter=low_inventory" class="text-decoration-none">
+                            <div class="card text-center p-3 inventory-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark">低在庫</h6>
+                                    <h4><span class="badge bg-dark rounded-pill">{{ low_inventory_count }}</span></h4>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar progress-bar-text bg-dark" role="progressbar" style="width: {{ low_inventory_percentage }}%;" aria-valuenow="{{ low_inventory_percentage }}" aria-valuemin="0" aria-valuemax="100">{{ low_inventory_percentage }}%</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="{% url 'dashboard' %}?filter=expiring" class="text-decoration-none">
+                            <div class="card text-center p-3 inventory-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark">30日以内に期限切れ</h6>
+                                    <h4><span class="badge bg-warning rounded-pill">{{ expire_count }}</span></h4>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar progress-bar-text bg-warning" role="progressbar" style="width: {{ expire_percentage }}%;" aria-valuenow="{{ expire_percentage }}" aria-valuemin="0" aria-valuemax="100">{{ expire_percentage }}%</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="{% url 'dashboard' %}?filter=expired" class="text-decoration-none">
+                            <div class="card text-center p-3 inventory-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark">期限切れ</h6>
+                                    <h4><span class="badge bg-danger rounded-pill">{{ expired_count }}</span></h4>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar progress-bar-text bg-danger" role="progressbar" style="width: {{ expired_percentage }}%;" aria-valuenow="{{ expired_percentage }}" aria-valuemin="0" aria-valuemax="100">{{ expired_percentage }}%</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between mb-4">
+        <!-- Search and Filter Box on the Left -->
+        <div>
+            <form class="d-flex" method="get" action="">
+                <!-- Category Dropdown -->
+                <div class="col-sm-4 p-0 me-2">
+                    <select class="form-select" name="category" aria-label="Category filter" onchange="this.form.submit()">
+                        <option value="">全種類</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" {% if selected_category|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Search Input -->
+                <div class="col-sm-8 p-0 me-2">
+                    <input class="form-control me-2" type="search" placeholder="品名、製造番号、商品コード..." aria-label="Search" name="search_query" value="{{ request.GET.search_query|default:'' }}">
+                </div>
+                <div class="col-sm-4 p-0">
+                    <button class="btn btn-outline-success" type="submit">検索</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Button Container -->
+        <div class="d-flex flex-wrap align-items-center">
+            <a href="{% url 'create_inbound_transaction' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-key="i" data-bs-original-title="Ctrl(⌃) - I" class="btn btn-primary me-2">{% bs_icon 'arrow-down-right-circle' %} 入庫</a>
+            <a href="{% url 'create_outbound_transaction' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-key="o" data-bs-original-title="Ctrl(⌃) - O" class="btn btn-secondary me-2">{% bs_icon 'arrow-up-right-circle' %} 出庫</a>
+            <a href="{% url 'create_transfer_transaction' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-key="t" data-bs-original-title="Ctrl(⌃) - T" class="btn btn-success me-2">{% bs_icon 'arrow-right-circle' %} 移動</a>
+            <button id="toggleDataItemId" class="btn btn-danger">{% bs_icon 'check2-circle' %}在庫調整が無効</button>
+        </div>
+    </div>
+
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                {% with request.GET.page as current_page %}
+                <th>
+                    <a href="?sort=id&order={% if request.GET.sort == 'id' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'id' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        ID
+                        {% if request.GET.sort == 'id' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'id' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=name&order={% if request.GET.sort == 'name' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'name' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        医薬品名
+                        {% if request.GET.sort == 'name' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'name' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=name__category__name&order={% if request.GET.sort == 'name__category__name' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'name__category__name' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        種類
+                        {% if request.GET.sort == 'name__category__name' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'name__category__name' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <a href="?sort=quantity&order={% if request.GET.sort == 'quantity' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'quantity' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        数量
+                        {% if request.GET.sort == 'quantity' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'quantity' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">単位</th>
+                <th>
+                    <a href="?sort=lot&order={% if request.GET.sort == 'lot' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'lot' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        製造番号
+                        {% if request.GET.sort == 'lot' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'lot' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=expire_date&order={% if request.GET.sort == 'expire_date' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'expire_date' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        使用期限
+                        {% if request.GET.sort == 'expire_date' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'expire_date' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <a href="?sort=expire_date&order={% if request.GET.sort == 'expire_date' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'expire_date' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        残存日数
+                        {% if request.GET.sort == 'expire_date' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'expire_date' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=site&order={% if request.GET.sort == 'site' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'site' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        拠点
+                        {% if request.GET.sort == 'site' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'site' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <a href="?sort=date_created&order={% if request.GET.sort == 'date_created' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'date_created' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        最終更新日時
+                        {% if request.GET.sort == 'date_created' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'date_created' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <a href="?sort=user&order={% if request.GET.sort == 'user' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'user' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        最終更新者
+                        {% if request.GET.sort == 'user' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'user' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <a href="?sort=status&order={% if request.GET.sort == 'status' %}{% if request.GET.order == 'asc' %}desc{% else %}asc{% endif %}{% else %}{% if default_sort_field == 'status' and default_sort_order == 'asc' %}desc{% else %}asc{% endif %}{% endif %}{% if current_page %}&page={{ current_page }}{% endif %}">
+                        ステータス
+                        {% if request.GET.sort == 'status' %}
+                            {% if request.GET.order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% elif not request.GET.sort and default_sort_field == 'status' %}
+                            {% if default_sort_order == 'asc' %}↓{% else %}↑{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                {% endwith %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr data-item-id="{{ item.id }}" style="cursor:pointer;" class="{% if item.id in expired_inventory_ids %}table-danger{% elif item.id in expire_inventory_ids %}table-warning{% endif %}">
+                <td>{{ item.id }}</td>
+                <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.name }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.name.category.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.unit }}</td>
+                <td>{{ item.lot }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.expire_date|date:"Y-m-d" }}</td>
+                <td>{{ item.remaining_shelf_life }}</td>
+                <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.site }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.date_created|date:"Y-m-d H:i:s" }}</td>
+                <td style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.user.last_name|default:"" }} {{ item.user.first_name|default:item.user.username }}</td>
+                <td>
+                    {% if item.id in expired_inventory_ids %}
+                        <span class="badge bg-dark">期限切れ</span>
+                    {% elif item.id in expire_inventory_ids %}
+                        <span class="badge bg-dark">まもなく期限切れ</span>
+                    {% elif item.id in low_inventory_ids %}
+                        <span class="badge bg-dark">低在庫</span>
+                    {% else %}
+                        <span class="badge bg-success">正常</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include 'inventory/pagination.html' %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    const toggleDataItemIdBtn = document.getElementById('toggleDataItemId');
+    let isDataItemIdEnabled = false;
+
+    function toggleDataItemId() {
+      document.querySelectorAll('tr[data-item-id]').forEach(row => {
+          row.dataset.originalId = row.getAttribute('data-item-id');
+      });
+
+      if (isDataItemIdEnabled) {
+          document.querySelectorAll('tr').forEach(row => {
+              const originalId = row.dataset.originalId;
+              if (originalId) {
+                  row.setAttribute('data-item-id', originalId);
+                  row.style.cursor = 'pointer';
+              }
+          });
+          toggleDataItemIdBtn.innerHTML = `{% bs_icon 'check2-circle' %} 在庫調整が無効`;
+          toggleDataItemIdBtn.classList.remove('btn-danger');
+          toggleDataItemIdBtn.classList.add('btn-info');
+      } else {
+          document.querySelectorAll('tr').forEach(row => {
+              row.removeAttribute('data-item-id');
+              row.style.cursor = 'default';
+          });
+          toggleDataItemIdBtn.innerHTML = `{% bs_icon 'exclamation-circle' %} 在庫調整が有効`;
+          toggleDataItemIdBtn.classList.remove('btn-info');
+          toggleDataItemIdBtn.classList.add('btn-danger');
+      }
+    }
+
+    toggleDataItemIdBtn.addEventListener('click', function() {
+        isDataItemIdEnabled = !isDataItemIdEnabled;
+        toggleDataItemId();
+    });
+
+    toggleDataItemId();
+
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('tr[data-item-id]') && isDataItemIdEnabled) {
+            const itemId = event.target.closest('tr[data-item-id]').getAttribute('data-item-id');
+            window.location.href = `{% url 'create_adjust_transaction' %}?item_id=${itemId}`;
+        }
+    });
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.ctrlKey || event.metaKey) {
+        // Define key mappings for the sidebar menu items
+        var keyMap = {
+            'i': document.querySelector('a[data-key="i"]'),
+            'o': document.querySelector('a[data-key="o"]'),
+            't': document.querySelector('a[data-key="t"]'),
+        };
+
+        // Check if the pressed key is in the key map
+        var key = event.key.toLowerCase();
+        if (key in keyMap) {
+            var link = keyMap[key];
+            if (link) {
+                window.location.href = link.href;
+            }
+        }
+    }
+});
+</script>
+
+<style>
+    .inventory-card {
+        min-height: 35px; /* Adjust this value as needed */
+    }
+
+    .progress-placeholder {
+        height: 16px; /* Adjust this value to match the height of the progress bars */
+    }
+
+    .progress-bar-text {
+        font-size: 8px;
+    }
+</style>
+{% endblock content %}

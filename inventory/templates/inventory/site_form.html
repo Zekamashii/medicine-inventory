@@ -1,0 +1,22 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if 'create-site' in request.path %}
+        <h4>拠点を追加</h4>
+    {% elif 'edit-site' in request.path %}
+        <h4>拠点を編集</h4>
+    {% endif %}
+    <hr style="text-align:left;margin-left:0">
+
+    <form method="post" enctype="multipart/form-data" id="siteForm">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">提出</button>
+            <a href="javascript:history.back()" class="btn text-body-tertiary">キャンセル</a>
+        </div>
+    </form>
+</div>
+{% endblock content %}

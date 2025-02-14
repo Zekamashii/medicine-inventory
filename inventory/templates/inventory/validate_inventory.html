@@ -1,0 +1,49 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h4 class="mb-0">不一致レポート：<span style="color: #2c3e50;font-weight: bold;">{{ selected_site_name }}</span></h4>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/repto" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+        <a href="{% url 'transactions' %}" class="btn btn-sm btn-primary">履歴照会に戻る</a>
+    </div>
+    <a>マニュアルを十分にご熟読いただいた上でご使用ください。それ以外の場合、このページのデータを使用しないでください。</a>
+    <hr style="text-align:left;margin-left:0">
+
+    {% if discrepancies %}
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>在庫アイテム ID</th>
+                <th>医薬品名</th>
+                <th>製造番号</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">システム在庫</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">計算数量</th>
+                <th style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">在庫調整による差異</th>
+                <th>単位</th>
+                <th>拠点</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for discrepancy in discrepancies %}
+            <tr>
+                <td>{{ discrepancy.id }}</td>
+                <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ discrepancy.name }}</td>
+                <td>{{ discrepancy.lot }}</td>
+                <td>{{ discrepancy.inventory_quantity }}</td>
+                <td>{{ discrepancy.transaction_quantity }}</td>
+                <td>{{ discrepancy.difference }}</td>
+                <td>{{ discrepancy.unit }}</td>
+                <td>{{ discrepancy.site }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>不一致は見つかりませんでした。</p>
+{% endif %}
+{% endblock content %}

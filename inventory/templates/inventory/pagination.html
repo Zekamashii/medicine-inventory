@@ -1,0 +1,49 @@
+<div class="pagination-container" style="display:flex;justify-content:center;">
+    {% if items %}
+        {% if items.has_other_pages %}
+        <div class="btn-group" role="group" aria-label="Item pagination">
+            {% if items.has_previous %}
+                <a href="?page={{ items.previous_page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.order %}&order={{ request.GET.order }}{% endif %}{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" id="prev-page" class="btn btn-outline-primary" title="前のページ">&larr;</a>
+            {% endif %}
+
+            {% for page_number in items.paginator.page_range %}
+                {% if page_number == 1 or page_number == items.paginator.num_pages or page_number >= items.number|add:-3 and page_number <= items.number|add:3 %}
+                    {% if items.number == page_number %}
+                        <button class="btn btn-outline-primary active">
+                            <span>{{ page_number }}</span>
+                        </button>
+                    {% else %}
+                        <a href="?page={{ page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.order %}&order={{ request.GET.order }}{% endif %}{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="btn btn-outline-primary">
+                            {{ page_number }}
+                        </a>
+                    {% endif %}
+                {% elif page_number == items.number|add:-4 or page_number == items.number|add:4 %}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if items.has_next %}
+                <a href="?page={{ items.next_page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.order %}&order={{ request.GET.order }}{% endif %}{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" id="next-page" class="btn btn-outline-primary" title="次のページ">&rarr;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% else %}
+        <p>「項目が見つかりませんでした」—まるで隠された宝物がもう少しで見つかるかのような、探求の旅は続きます。</p>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'ArrowLeft') {
+            var prevPageLink = document.getElementById('prev-page');
+            if (prevPageLink) {
+                window.location.href = prevPageLink.href;
+            }
+        } else if (event.key === 'ArrowRight') {
+            var nextPageLink = document.getElementById('next-page');
+            if (nextPageLink) {
+                window.location.href = nextPageLink.href;
+            }
+        }
+    });
+</script>

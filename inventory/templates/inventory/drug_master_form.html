@@ -1,0 +1,101 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+{% load bootstrap_icons %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            {% if 'create-drug-master' in request.path %}
+                <h5 class="mb-0">医薬品マスターを追加</h5>
+                <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/masut#masutwo" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+            {% elif 'edit-drug-master' in request.path %}
+                <h5 class="mb-0">医薬品マスターを編集</h5>
+                <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/masut#masutwo-1" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+            {% endif %}
+
+        </div>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    <form method="post" enctype="multipart/form-data" id="transactionForm">
+        {% csrf_token %}
+        {{ form|crispy }}
+
+        {% if 'edit-drug-master' in request.path %}
+
+            {{ safety_stock_formset.management_form }}
+            {{ obsolete_status_formset.management_form }}
+
+            <div class="form-group mt-3">
+                <div class="row">
+                    <div class="col-auto">
+                        <!-- Trigger button for safety stock collapsible -->
+                        <a class="btn btn-success mb-2" data-bs-toggle="collapse" href="#safetyStockCollapse" role="button" aria-expanded="false" aria-controls="safetyStockCollapse">
+                            {% bs_icon 'arrows-collapse' %} 定数設定
+                        </a>
+                    </div>
+
+                    <div class="col-auto">
+                        <!-- Trigger button for site settings collapsible -->
+                        <a class="btn btn-danger mb-2" data-bs-toggle="collapse" href="#siteSettingsCollapse" role="button" aria-expanded="false" aria-controls="siteSettingsCollapse">
+                            {% bs_icon 'arrows-collapse' %} 拠点別廃止
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Collapsible div for safety stock -->
+                <div class="collapse" id="safetyStockCollapse">
+                    <div class="container">
+                        {% for form in safety_stock_formset %}
+                            {% if forloop.counter0|divisibleby:4 %}
+                                <div class="row">
+                            {% endif %}
+                            <div class="col-md-3 border p-3 mb-2">
+                                <h5>{{ form.instance.site.name }}</h5>
+                                {{ form|crispy }}
+                            </div>
+                            {% if forloop.counter|divisibleby:4 and not forloop.last %}
+                                </div>
+                            {% elif forloop.last %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Collapsible div for site settings -->
+                <div class="collapse" id="siteSettingsCollapse">
+                    <div class="container">
+                        <p class="text-warning">※ 既存の在庫がある場合でも、在庫確認と在庫予測から非表示になります。</p>
+                        <div class="row">
+                            {% for form in obsolete_status_formset %}
+                                <div class="col-md-3 border p-3 mb-2">
+                                    <h5>{{ form.instance.site.name }}</h5>
+                                    {{ form|crispy }}
+                                    {% if form.errors %}
+                                        <div class="text-danger">
+                                            {{ form.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {% if forloop.counter|divisibleby:4 and not forloop.last %}
+                                    </div><div class="row">
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+        {% endif %}
+
+        <div class="form-group mt-3">
+            <button type="submit" class="btn btn-primary">提出</button>
+            {% if not 'edit-drug-master' in request.path %}
+                <button type="submit" name="action" value="add_more" class="btn btn-secondary">さらに追加</button>
+            {% endif %}
+            <a href="javascript:history.back()" class="btn text-body-tertiary">キャンセル</a>
+        </div>
+    </form>
+</div>
+
+{% endblock content %}

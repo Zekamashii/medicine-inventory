@@ -1,0 +1,13 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h4>すべての医薬品の仮名を設定する</h4>
+    <hr style="text-align:left;margin-left:0">
+    <h5>Developer Comment: Kana must exist for each drug in order to make sorting work. <br/>The system will automatically add kana for all newly created drugs.</h5>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" name="populate" class="btn btn-danger">GO</button>
+    </form>
+</div>
+{% endblock content %}

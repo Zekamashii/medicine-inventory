@@ -1,0 +1,187 @@
+{% extends 'inventory/base.html' %}
+{% load bootstrap_icons %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <h5 class="mb-0">差異調整：<span style="color: #2c3e50; font-weight: bold;">{{ selected_site_name }}</span></h5>
+            <a href="https://tbclinic.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru/zai-ku-que-ren#zai-ku-xiu-zheng" class="text-muted ms-2" target="_blank">{% bs_icon 'question-circle' %}</a>
+        </div>
+        <a href="{% url 'inspection' %}" class="btn btn-sm btn-primary">実数カウントに戻る</a>
+    </div>
+    <hr style="text-align:left;margin-left:0">
+
+    {% if selected_site_id %}
+        {% if no_data %}
+            <p>😅ここには何もありません。たぶん、宇宙人がデータを盗んだかも？🛸</p>
+        {% else %}
+            {% if inventory_adjusted %}
+                <p style="color: green;">差異調整は、前回の実数カウントに基づいて完了しました。新しい実数カウントを作成してください。</p>
+            {% else %}
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div class="flex-grow-1 me-5" style="max-width: 100%;">
+                    <form method="post" id="adjustment-form">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            <div class="mb-4">
+                                {% for message in messages %}
+                                    <div class="alert alert-dismissible {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} mb-0">
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        <p class="mb-0">{{ message }}</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <table class="table-auto">
+                            <thead>
+                                <tr>
+                                    <th>医薬品名</th>
+                                    <th>在庫差異（医薬品単位での総差異）</th>
+                                    <th>製造番号</th>
+                                    <th>計算上の在庫数</th>
+                                    <th>調整する数量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if discrepancies %}
+                                    {% for item in discrepancies %}
+                                        {% if item.lot_info %}
+                                            {% for lot_option in item.lot_info %}
+                                                <tr class="data-row">
+                                                    {% if forloop.first %}
+                                                        <td rowspan="{{ item.lot_info|length }}">{{ item.drug_name }}</td>
+                                                        <td rowspan="{{ item.lot_info|length }}">{{ item.discrepancy }}</td>
+                                                    {% endif %}
+                                                    <td>
+                                                        <input type="hidden" name="discrepancy_id" value="{{ item.drug_id }}">
+                                                        <select name="lot_number_{{ item.drug_id }}_{{ forloop.counter0 }}" class="form-control lot-select" data-drug-id="{{ item.drug_id }}" required>
+                                                            <option value="{{ lot_option.lot }}" data-quantity="{{ lot_option.quantity }}">{{ lot_option.lot }}</option>
+                                                        </select>
+                                                    </td>
+                                                    <td class="quantity-display" id="quantity-{{ item.drug_id }}-{{ forloop.counter0 }}">
+                                                        {{ lot_option.quantity }}
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="number" name="corrected_quantity_{{ item.drug_id }}_{{ forloop.counter0 }}" class="form-control manual-input" required value="{{ lot_option.quantity }}">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">おめでとうございます！在庫はすべて完璧です！🎉</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="submit" class="btn btn-primary">提出</button>
+                            <a href="javascript:history.back()" class="btn text-body-tertiary">キャンセル</a>
+                        </div>
+
+                        {% if zero_inventory_drugs %}
+                            <hr style="text-align:left;margin-left:0">
+                            <h5 class="mt-4">システム在庫がゼロの医薬品：</h5>
+                            <p style="color: #e74c3c;">在庫項目をゼロから調整するには、「入庫を登録」を使用してください。</p>
+                            <div class="zero-inventory-list">
+                                {% for drug in zero_inventory_drugs %}
+                                    <li>{{ drug.drug_name }}</li>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    {% else %}
+        <p>🧙‍♂️ 拠点を選んで、世界を救いましょう！🚀</p>
+    {% endif %}
+</div>
+
+<style>
+    .table-auto {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #fff;
+    }
+
+    .table-auto th {
+        border: 1px solid #ddd;
+        text-align: left;
+        padding: 8px;
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    .table-auto td {
+        border: 1px solid #ddd;
+        text-align: left;
+        padding: 8px;
+        background-color: #fff;
+        font-weight: normal;
+    }
+
+    input[type="number"] {
+        width: 80px;
+        border: 1px solid #ccc;
+        padding: 0px;
+        text-align: left;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateCorrectedQuantity(selectElement) {
+        if (!selectElement) return;
+
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        if (!selectedOption) return;
+
+        const quantity = selectedOption.getAttribute('data-quantity');
+        const drugId = selectElement.getAttribute('data-drug-id');
+
+        const quantityDisplay = selectElement.closest('tr').querySelector('.quantity-display');
+        if (quantityDisplay) quantityDisplay.textContent = quantity;
+
+        const correctedQuantityInput = selectElement.closest('tr').querySelector(`input[name^="corrected_quantity_${drugId}"]`);
+        if (correctedQuantityInput) correctedQuantityInput.value = quantity;
+    }
+
+    document.querySelectorAll('.lot-select').forEach(function(selectElement) {
+        if (selectElement.options.length > 0) {
+            updateCorrectedQuantity(selectElement);
+
+            selectElement.addEventListener('change', function() {
+                updateCorrectedQuantity(selectElement);
+            });
+        }
+    });
+
+    document.getElementById('adjustment-form').addEventListener('submit', function(event) {
+        let isValid = true;
+        const inputs = document.querySelectorAll('input[name^="corrected_quantity_"]');
+
+        inputs.forEach(function(input) {
+            const value = parseInt(input.value, 10);
+            if (isNaN(value) || value < 0) {
+                isValid = false;
+                alert('数量は0以上にしてください。');
+            }
+        });
+
+        if (!isValid) {
+            event.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
