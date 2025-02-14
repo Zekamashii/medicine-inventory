@@ -1,4 +1,4 @@
-# CK-Stock 医薬品在庫管理システム
+# 医薬品在庫管理システム
 
 ## 📓Description
 
@@ -111,7 +111,7 @@ A medicine inventory management system. The [MS852](https://www.ute.com/jp/produ
 
 Clone the repo.
 
-Create a .env file or download the file from Bitwarden.
+Create a .env file.
 
 It is something like this:
 
@@ -248,6 +248,3 @@ crontab -l
 
 ## 📝User Documentation
 [CK-Stock マニュアル](https://tbc-4.gitbook.io/ck-stock-knowledge-base/ck-stock-manyuaru)
-
-## 🪫Service Status
-[UptimeRobot Service Status Page](https://stats.uptimerobot.com/zhvsou9Xtv)
